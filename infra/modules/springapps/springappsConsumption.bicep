@@ -29,7 +29,7 @@ resource asaInstance 'Microsoft.AppPlatform/Spring@2023-03-01-preview' = {
   tags: union(tags, { 'azd-service-name': appName })
   sku: {
     name: 'S0'
-	tier: 'StandardGen2'
+	tier: 'Standard'
   }
   properties: {
 	managedEnvironmentId: asaManagedEnvironment.id
