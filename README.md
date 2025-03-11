@@ -1,110 +1,195 @@
 ---
 page_type: sample
 languages:
-- azdeveloper
 - java
-- bicep
-- typescript
-- html
 products:
-- azure
-- azure-spring-apps
-- azure-database-postgresql
-- azure-key-vault
-- azure-pipelines
-- ms-build-openjdk
-urlFragment: ASA-Samples-Web-Application
-name: React Web App with Java API and PostgreSQL - Flexible Server on Azure Spring Apps
-description: A complete ToDo app on Azure Spring Apps with Java API and Azure Database for PostgreSQL flexible server for storage. Uses Azure Developer CLI (azd) to build, deploy, and run
+- azure-cosmos-db
+name: Using Azure Cosmos DB by Spring Data in Spring Boot Application
+description: This sample demonstrates how to use Azure Cosmos DB by Spring Data in Spring Boot application.
 ---
-<!-- YAML front-matter schema: https://review.learn.microsoft.com/en-us/help/contribute/samples/process/onboarding?branch=main#supported-metadata-fields-for-readmemd -->
 
-# React Web App with Java API and PostgreSQL - Flexible Server on Azure Spring Apps
+# Using Azure Cosmos DB by Spring Data in Spring Boot Application
+This guide demonstrates how to use Azure Cosmos DB via Spring Boot Starter `spring-cloud-azure-starter-data-cosmos` to store data in and retrieve data from your Azure Cosmos DB.
 
-A blueprint for getting a React web app with a Java API and a PostgreSQL - Flexible Server on Azure. The blueprint includes sample application code (a ToDo web app) which can be removed and replaced with your own application code. Add your own source code and leverage the Infrastructure as Code assets (written in Bicep) to get up and running quickly. This architecture is for running containerized apps or microservices on a serverless platform.
+## What You Will Build
+You will build an application to write data to and query data from Azure Cosmos DB via `spring-cloud-azure-starter-data-cosmos`.
 
-Let's jump in and get this up and running in Azure. When you are finished, you will have a fully functional web app deployed to the cloud. In later steps, you'll see how to setup a pipeline and run the application.
+## What You Need
 
-!["Screenshot of deployed ToDo app"](assets/web.png)
+- [An Azure subscription](https://azure.microsoft.com/free/)
+- [Terraform](https://www.terraform.io/)
+- [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli)
+- [JDK8](https://www.oracle.com/java/technologies/downloads/) or later
+- Maven
+- You can also import the code straight into your IDE:
+    - [IntelliJ IDEA](https://www.jetbrains.com/idea/download)
 
-<sup>Screenshot of the deployed ToDo app</sup>
+## Provision Azure Resources Required to Run This Sample
+This sample will create Azure resources using Terraform. If you choose to run it without using Terraform to provision resources, please pay attention to:
+> [!IMPORTANT]  
+> If you choose to use a security principal to authenticate and authorize with Microsoft Entra ID for accessing an Azure resource
+> please refer to [Authorize access with Microsoft Entra ID](https://learn.microsoft.com/azure/developer/java/spring-framework/authentication#authorize-access-with-microsoft-entra-id) to make sure the security principal has been granted the sufficient permission to access the Azure resource.
 
-Before delving into the step-by-step execution of the application, you can simply click the Deploy to Azure button. This will instantly deploy the app to Azure Spring Apps.
+### Authenticate Using the Azure CLI
+Terraform must authenticate to Azure to create infrastructure.
 
-| Deploy to Azure Spring Apps | |
-|--|--|
-| Consumption plan|[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FASA-Samples-Web-Application%2Fquickstart%2Finfra%2Fazuredeploy-asa-consumption.json)|
-| Basic/Standard plan|[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FASA-Samples-Web-Application%2Fquickstart%2Finfra%2Fazuredeploy-asa-standard.json)|
-| Enterprise plan|[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FASA-Samples-Web-Application%2Fquickstart%2Finfra%2Fazuredeploy-asa-enterprise.json)|
+In your terminal, use the Azure CLI tool to setup your account permissions locally.
 
-### Prerequisites
-
-The following prerequisites are required to use this application. Please ensure that you have them all installed locally.
-
-- [Azure Developer CLI 1.2.0 or later](https://aka.ms/azd-install)
-- [Java 17 or later](https://learn.microsoft.com/en-us/java/openjdk/install) - for API backend
-- [Node.js with npm (16.13.1+)](https://nodejs.org/) - for the Web frontend
-- [Docker](https://docs.docker.com/get-docker/)
-- [Powershell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.3) if you use windows
-
-If you are using Azure Developer CLI with the version lower than 1.2.0, then you will need to enable the feature for Azure Spring Apps support manually by the following command:
-```bash
-azd config set alpha.springapp on
+```shell
+az login
 ```
 
-### Quickstart
+Your browser window will open and you will be prompted to enter your Azure login credentials. After successful authentication, your terminal will display your subscription information. You do not need to save this output as it is saved in your system for Terraform to use.
 
-To learn how to get started with any template, follow the steps in [this quickstart](https://learn.microsoft.com/azure/developer/azure-developer-cli/get-started?tabs=localinstall&pivots=programming-language-java) with this template(`Azure-Samples/ASA-Samples-Web-Application`).
+```shell
+You have logged in. Now let us find all the subscriptions to which you have access...
 
-This quickstart will show you how to authenticate on Azure, initialize using a template, provision infrastructure and deploy code on Azure via the following commands:
-
-```bash
-# Log in to azd. Only required once per-install.
-azd auth login
-
-# First-time project setup. Initialize a project in the current directory, using this template. 
-azd init --template Azure-Samples/ASA-Samples-Web-Application
-
-# Provision and deploy to Azure
-azd up
+[
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "home-Tenant-Id",
+    "id": "subscription-id",
+    "isDefault": true,
+    "managedByTenants": [],
+    "name": "Subscription-Name",
+    "state": "Enabled",
+    "tenantId": "0envbwi39-TenantId",
+    "user": {
+      "name": "your-username@domain.com",
+      "type": "user"
+    }
+  }
+]
 ```
 
-The template uses Azure Spring Apps [Standard consumption and dedicated plan](https://learn.microsoft.com/azure/spring-apps/overview#standard-consumption-and-dedicated-plan) by default. If you want to switch to `Standard` plan, you can use the following command before running `azd up`.
-
-```bash
-azd env set PLAN standard
+If you have more than one subscription, specify the subscription-id you want to use with command below:
+```shell
+az account set --subscription <your-subscription-id>
 ```
 
-If you have already provisioned the resources with the Standard consumption and dedicated plan and want to try the Standard plan, you need to run `azd down` first to delete the resources, and then run the above command and `azd up` again to provision and deploy.
+### Provision the Resources
 
-### Application Architecture
+After login Azure CLI with your account, now you can use the terraform script to create Azure Resources.
 
-This application utilizes the following Azure resources:
+#### Run with Bash
 
-- [**Azure Spring Apps**](https://docs.microsoft.com/azure/spring-apps/) to host the application
-- [**Azure PostgreSQL - Flexible Server**](https://docs.microsoft.com/azure/postgresql/flexible-server/) for storage
+```shell
+# In the root directory of the sample
+# Initialize your Terraform configuration
+terraform -chdir=./terraform init
 
-Here's a high level architecture diagram that illustrates these components. Notice that these are all contained within a single [resource group](https://docs.microsoft.com/azure/azure-resource-manager/management/manage-resource-groups-portal), that will be created for you when you create the resources.
+# Apply your Terraform Configuration
+terraform -chdir=./terraform apply -auto-approve
 
-!["Application architecture diagram"](assets/resources.png)
+```
 
-> This template provisions resources to an Azure subscription that you will select upon provisioning them. Please refer to the [Pricing calculator for Microsoft Azure](https://azure.microsoft.com/pricing/calculator/) and, if needed, update the included Azure resource definitions found in `infra/main.bicep` to suit your needs.
+#### Run with Powershell
 
-### Application Code
+```shell
+# In the root directory of the sample
+# Initialize your Terraform configuration
+terraform -chdir=terraform init
 
-This template is structured to follow the [Azure Developer CLI](https://aka.ms/azure-dev/overview). You can learn more about `azd` architecture in [the official documentation](https://learn.microsoft.com/azure/developer/azure-developer-cli/make-azd-compatible?pivots=azd-create#understand-the-azd-architecture).
+# Apply your Terraform Configuration
+terraform -chdir=terraform apply -auto-approve
 
-### Next Steps
+```
 
-At this point, you have a complete application deployed on Azure. But there is much more that the Azure Developer CLI can do. These next steps will introduce you to additional commands that will make creating applications on Azure much easier. Using the Azure Developer CLI, you can delete the resources easily.
+It may take a few minutes to run the script. After successful running, you will see prompt information like below:
 
-- [`azd down`](https://learn.microsoft.com/azure/developer/azure-developer-cli/reference#azd-down) - to delete all the Azure resources created with this template
+```shell
+
+azurecaf_name.resource_group: Creating...
+azurecaf_name.cosmos: Creating...
+azurerm_resource_group.main: Creating...
+azurerm_cosmosdb_account.application: Creating...
+...
+...
+azurerm_cosmosdb_account.application: Creation complete after 2m26s ...
+azurerm_cosmosdb_sql_database.db: Creating...
+...
+azurerm_cosmosdb_sql_database.db: Creation complete after 41s ...
+azurerm_cosmosdb_sql_container.application: Creating...
+azurerm_cosmosdb_sql_container.application: Still creating... [10s elapsed]
+azurerm_cosmosdb_sql_container.application: Creation complete after 39s ...
+...
+...
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
+
+```
+
+You can go to [Azure portal](https://ms.portal.azure.com/) in your web browser to check the resources you created.
+
+### Export Output to Your Local Environment
+Running the command below to export environment values:
+
+#### Run with Bash
+
+```shell
+source ./terraform/setup_env.sh
+```
+
+#### Run with Powershell
+
+```shell
+terraform\setup_env.ps1
+```
+
+If you want to run the sample in debug mode, you can save the output value.
+
+```shell
+AZURE_COSMOS_ENDPOINT=...
+COSMOS_DATABASE=...
+```
+
+## Run Locally
+
+### Run the sample with Maven
+
+In your terminal, run `mvn clean spring-boot:run`.
+
+```shell
+mvn clean spring-boot:run
+```
+
+### Run the sample in IDEs
+
+You can debug your sample by adding the saved output values to the tool's environment variables or the sample's `application.yaml` file.
+
+* If your tool is `IDEA`, please refer to [Debug your first Java application](https://www.jetbrains.com/help/idea/debugging-your-first-java-application.html) and [add environment variables](https://www.jetbrains.com/help/objc/add-environment-variables-and-program-arguments.html#add-environment-variables).
+
+* If your tool is `ECLIPSE`, please refer to [Debugging the Eclipse IDE for Java Developers](https://www.eclipse.org/community/eclipse_newsletter/2017/june/article1.php) and [Eclipse Environment Variable Setup](https://examples.javacodegeeks.com/desktop-java/ide/eclipse/eclipse-environment-variable-setup-example/).
+
+## Verify This Sample
+
+Verify in your app’s logs that similar messages were posted:
+```shell
+
+...
+Deleted all data in container.
+...
+spring-cloud-azure-data-cosmos-sample successfully run.
+```
 
 
-### Additional `azd` commands
+## Clean Up Resources
+After running the sample, if you don't want to run the sample, remember to destroy the Azure resources you created to avoid unnecessary billing.
 
-The Azure Developer CLI includes many other commands to help with your Azure development experience. You can view these commands at the terminal by running `azd help`. You can also view the full list of commands on our [Azure Developer CLI command](https://aka.ms/azure-dev/ref) page.
+The terraform destroy command terminates resources managed by your Terraform project.   
+To destroy the resources you created.
 
-## Reporting Issues and Feedback
+#### Run with Bash
 
-If you have any feature requests, issues, or areas for improvement, please [file an issue](https://aka.ms/azure-dev/issues). To keep up-to-date, ask questions, or share suggestions, join our [GitHub Discussions](https://aka.ms/azure-dev/discussions). You may also contact us via AzDevTeam@microsoft.com.
+```shell
+terraform -chdir=./terraform destroy -auto-approve
+```
+
+#### Run with Powershell
+
+```shell
+terraform -chdir=terraform destroy -auto-approve
+```
+
+## Deploy to Azure Spring Apps
+
+Now that you have the Spring Boot application running locally, it's time to move it to production. [Azure Spring Apps](https://learn.microsoft.com/azure/spring-apps/overview) makes it easy to deploy Spring Boot applications to Azure without any code changes. The service manages the infrastructure of Spring applications so developers can focus on their code. Azure Spring Apps provides lifecycle management using comprehensive monitoring and diagnostics, configuration management, service discovery, CI/CD integration, blue-green deployments, and more. To deploy your application to Azure Spring Apps, see [Deploy your first application to Azure Spring Apps](https://learn.microsoft.com/azure/spring-apps/quickstart?tabs=Azure-CLI).
