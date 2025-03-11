@@ -3,3 +3,9 @@ terraform/.terraform/
 terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
 terraform.tfstate
+target/classes/application.yml
+target/classes/com/azure/spring/sample/cosmos/CosmosSampleApplication.class
+target/classes/com/azure/spring/sample/cosmos/User.class
+target/classes/com/azure/spring/sample/cosmos/UserRepository.class
+target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
+target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
