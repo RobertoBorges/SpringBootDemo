@@ -1,110 +1,315 @@
 ---
 page_type: sample
 languages:
-- azdeveloper
-- java
-- bicep
-- typescript
-- html
+  - java
 products:
-- azure
-- azure-spring-apps
-- azure-database-postgresql
-- azure-key-vault
-- azure-pipelines
-- ms-build-openjdk
-urlFragment: ASA-Samples-Web-Application
-name: React Web App with Java API and PostgreSQL - Flexible Server on Azure Spring Apps
-description: A complete ToDo app on Azure Spring Apps with Java API and Azure Database for PostgreSQL flexible server for storage. Uses Azure Developer CLI (azd) to build, deploy, and run
+  - azure
+  - msal-java
+  - microsoft-entra-id
+  - entra
+urlFragment: msal-java-spring-boot-sign-in
+description: "This sample demonstrates a Java Spring MVC web app that authenticates users with Microsoft Entra ID"
 ---
-<!-- YAML front-matter schema: https://review.learn.microsoft.com/en-us/help/contribute/samples/process/onboarding?branch=main#supported-metadata-fields-for-readmemd -->
 
-# React Web App with Java API and PostgreSQL - Flexible Server on Azure Spring Apps
+# Enable your Java Spring Boot web app to sign in users on your Microsoft Entra tenant with the Microsoft identity platform
 
-A blueprint for getting a React web app with a Java API and a PostgreSQL - Flexible Server on Azure. The blueprint includes sample application code (a ToDo web app) which can be removed and replaced with your own application code. Add your own source code and leverage the Infrastructure as Code assets (written in Bicep) to get up and running quickly. This architecture is for running containerized apps or microservices on a serverless platform.
+- [Overview](#overview)
+- [Scenario](#scenario)
+- [Contents](#contents)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+  - [Clone or download this repository](#clone-or-download-this-repository)
+  - [Register the sample application(s) with your Microsoft Entra tenant](#register-the-sample-applications-with-your-azure-active-directory-tenant)
+  - [Choose the Microsoft Entra tenant where you want to create your applications](#choose-the-azure-ad-tenant-where-you-want-to-create-your-applications)
+  - [Register the webApp app (java-spring-webapp-auth)](#register-the-webapp-app-java-spring-webapp-auth)
+- [Running the sample](#running-the-sample)
+- [Explore the sample](#explore-the-sample)
+- [We'd love your feedback!](#wed-love-your-feedback)
+- [About the code](#about-the-code)
+  - [Project Initialization](#project-initialization)
+  - [ID Token Claims](#id-token-claims)
+  - [Sign-in and sign-out links](#sign-in-and-sign-out-links)
+  - [Authentication-dependent UI elements](#authentication-dependent-ui-elements)
+  - [Protecting routes with aadwebsecurityconfigureradapter](#protecting-routes-with-aadwebsecurityconfigureradapter)
+- [More information](#more-information)
+- [Community Help and Support](#community-help-and-support)
+- [Contributing](#contributing)
 
-Let's jump in and get this up and running in Azure. When you are finished, you will have a fully functional web app deployed to the cloud. In later steps, you'll see how to setup a pipeline and run the application.
+<!-- ![Build badge](https://identitydivision.visualstudio.com/_apis/public/build/definitions/a7934fdd-dcde-4492-a406-7fad6ac00e17/<BuildNumber>/badge) -->
 
-!["Screenshot of deployed ToDo app"](assets/web.png)
+## Overview
 
-<sup>Screenshot of the deployed ToDo app</sup>
+This sample demonstrates a Java Spring MVC web app that signs in users on your Microsoft Entra tenant using the [Microsoft Entra ID Spring Boot Starter client library for Java](https://mvnrepository.com/artifact/com.azure.spring/spring-cloud-azure-starter-active-directory). It uses the OpenID Connect protocol.
 
-Before delving into the step-by-step execution of the application, you can simply click the Deploy to Azure button. This will instantly deploy the app to Azure Spring Apps.
+![Overview](./ReadmeFiles/topology.png)
 
-| Deploy to Azure Spring Apps | |
-|--|--|
-| Consumption plan|[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FASA-Samples-Web-Application%2Fquickstart%2Finfra%2Fazuredeploy-asa-consumption.json)|
-| Basic/Standard plan|[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FASA-Samples-Web-Application%2Fquickstart%2Finfra%2Fazuredeploy-asa-standard.json)|
-| Enterprise plan|[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FASA-Samples-Web-Application%2Fquickstart%2Finfra%2Fazuredeploy-asa-enterprise.json)|
+## Scenario
 
-### Prerequisites
+1. The client Java Spring MVC web app leverages the Microsoft Entra ID Spring Boot Starter client library for Java to sign-in a user and obtain an ID Token from **Microsoft Entra ID**.
+2. The **ID Token** proves that the user has successfully authenticated with **Microsoft Entra ID** and allows the user to access protected routes.
 
-The following prerequisites are required to use this application. Please ensure that you have them all installed locally.
+![Overview](./ReadmeFiles/topology.png)
 
-- [Azure Developer CLI 1.2.0 or later](https://aka.ms/azd-install)
-- [Java 17 or later](https://learn.microsoft.com/en-us/java/openjdk/install) - for API backend
-- [Node.js with npm (16.13.1+)](https://nodejs.org/) - for the Web frontend
-- [Docker](https://docs.docker.com/get-docker/)
-- [Powershell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.3) if you use windows
+## Contents
 
-If you are using Azure Developer CLI with the version lower than 1.2.0, then you will need to enable the feature for Azure Spring Apps support manually by the following command:
-```bash
-azd config set alpha.springapp on
+| File/folder       | Description                                |
+|-------------------|--------------------------------------------|
+| `AppCreationScripts/`                                                               | Scripts to automatically configure Microsoft Entra app registrations.                              |
+| `pom.xml`                                                                           | Application dependencies.                                                                   |
+| `src/main/resources/templates/`                                                     | Thymeleaf Templates for UI.                                                                 |
+| `src/main/resources/application.yml`                                                | Application and Microsoft Entra ID Boot Starter Library Configuration.                                |
+| `src/main/java/com/microsoft/azuresamples/msal4j/msidentityspringbootwebapp/`       | This directory contains the main application entry point, controller, and config classes.   |
+| `.../MsIdentitySpringBootWebappApplication.java`                                    | Main class.                                                                                 |
+| `.../SampleController.java`                                                         | Controller with endpoint mappings.                                                          |
+| `.../SecurityConfig.java`                                                           | Security Configuration (e.g., which routes require authentication?).                        |
+| `.../Utilities.java`                                                                | Utility Class (e.g., filter ID token claims                                                 |
+| `CHANGELOG.md`                                                                      | List of changes to the sample.                                                              |
+| `CONTRIBUTING.md`                                                                   | Guidelines for contributing to the sample.                                                  |
+| `LICENSE`                                                                           | The license for the sample.                                                                 |
+
+## Prerequisites
+
+- [JDK Version 15](https://jdk.java.net/15/). This sample has been developed on a system with Java 15 but may be compatible with other versions.
+- [Maven 3](https://maven.apache.org/download.cgi)
+- [Java Extension Pack for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack) is recommended for running this sample in VSCode.
+- An **Microsoft Entra ID** tenant. For more information see: [How to get a Microsoft Entra tenant](https://docs.microsoft.com/azure/active-directory/develop/quickstart-create-new-tenant)
+- A user account in your **Microsoft Entra ID** tenant. This sample will not work with a **personal Microsoft account**. Therefore, if you signed in to the [Microsoft Entra admin center](https://entra.microsoft.com) with a personal account and have never created a user account in your directory before, you need to do that now.
+
+## Setup
+
+### Clone or download this repository
+
+From your shell or command line:
+
+```console
+    git clone https://github.com/Azure-Samples/ms-identity-msal-java-samples
+    cd ms-identity-msal-java-samples
+    cd .\4-spring-web-app\1-Authentication\sign-in\
 ```
 
-### Quickstart
+or download and extract the repository .zip file.
 
-To learn how to get started with any template, follow the steps in [this quickstart](https://learn.microsoft.com/azure/developer/azure-developer-cli/get-started?tabs=localinstall&pivots=programming-language-java) with this template(`Azure-Samples/ASA-Samples-Web-Application`).
+> :warning: To avoid path length limitations on Windows, we recommend cloning into a directory near the root of your drive.
 
-This quickstart will show you how to authenticate on Azure, initialize using a template, provision infrastructure and deploy code on Azure via the following commands:
+### Register the sample application(s) with your Microsoft Entra tenant
 
-```bash
-# Log in to azd. Only required once per-install.
-azd auth login
+There is one project in this sample. To register it, you can:
 
-# First-time project setup. Initialize a project in the current directory, using this template. 
-azd init --template Azure-Samples/ASA-Samples-Web-Application
+- follow the steps below for manually register your apps
+- or use PowerShell scripts that:
+  - **automatically** creates the Microsoft Entra applications and related objects (passwords, permissions, dependencies) for you.
+  - modify the projects' configuration files.
 
-# Provision and deploy to Azure
-azd up
+<details>
+  <summary>Expand this section if you want to use this automation:</summary>
+
+> :warning: If you have never used **Azure AD Powershell** before, we recommend you go through the [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md) once to ensure that your environment is prepared correctly for this step.
+
+1. On Windows, run PowerShell as **Administrator** and navigate to the root of the cloned directory
+1. If you have never used Azure AD Powershell before, we recommend you go through the [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md) once to ensure that your environment is prepared correctly for this step.
+1. In PowerShell run:
+
+   ```PowerShell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
+   ```
+
+1. Run the script to create your Microsoft Entra application and configure the code of the sample application accordingly.
+1. In PowerShell run:
+
+   ```PowerShell
+   cd .\AppCreationScripts\
+   .\Configure.ps1
+   ```
+
+   > Other ways of running the scripts are described in [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md)
+   > The scripts also provide a guide to automated application registration, configuration and removal which can help in your CI/CD scenarios.
+
+</details>
+
+### Choose the Microsoft Entra tenant where you want to create your applications
+
+As a first step you'll need to:
+
+1. Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com).
+1. If your account is present in more than one Microsoft Entra tenant, select your profile at the top right corner in the menu on top of the page, and then **switch directory** to change your portal session to the desired Microsoft Entra tenant.
+
+### Register the webApp app (java-spring-webapp-auth)
+
+1. Navigate to the [Microsoft Entra admin center](https://entra.microsoft.com) and select the **Microsoft Entra ID** service.
+1. Select the **App Registrations** blade on the left, then select **New registration**.
+1. In the **Register an application page** that appears, enter your application's registration information:
+   - In the **Name** section, enter a meaningful application name that will be displayed to users of the app, for example `java-spring-webapp-auth`.
+   - Under **Supported account types**, select **Accounts in this organizational directory only**.
+   - In the **Redirect URI (optional)** section, select **Web** in the combo-box and enter the following redirect URI: `http://localhost:8080/login/oauth2/code/`.
+1. Select **Register** to create the application.
+1. In the app's registration screen, find and note the **Application (client) ID**. You use this value in your app's configuration file(s) later in your code.
+1. Select **Save** to save your changes.
+1. In the app's registration screen, select the **Certificates & secrets** blade in the left to open the page where we can generate secrets and upload certificates.
+1. In the **Client secrets** section, select **New client secret**:
+   - Type a key description (for instance `app secret`),
+   - Select one of the available key durations (**In 1 year**, **In 2 years**, or **Never Expires**) as per your security posture.
+   - The generated key value will be displayed when you select the **Add** button. Copy the generated value for use in the steps later.
+   - You'll need this key later in your code's configuration files. This key value will not be displayed again, and is not retrievable by any other means, so make sure to note it from the Microsoft Entra admin center before navigating to any other screen or blade.
+
+#### Configure the webApp app (java-spring-webapp-auth) to use your app registration
+
+Open the project in your IDE (Visual Studio Code or IntelliJ IDEA) to configure the code.
+
+> In the steps below, "ClientID" is the same as "Application ID" or "AppId".
+
+1. Open the `src\main\resources\application.yml` file.
+1. Find the key `Enter_Your_Tenant_ID_Here` and replace the existing value with your Microsoft Entra tenant ID.
+1. Find the key `Enter_Your_Client_ID_Here` and replace the existing value with the application ID (clientId) of `java-spring-webapp-auth` app copied from the Microsoft Entra admin center.
+1. Find the key `Enter_Your_Client_Secret_Here` and replace the existing value with the key you saved during the creation of `java-spring-webapp-auth` copied from the Microsoft Entra admin center.
+
+## Running the sample
+
+1. Open a terminal or the integrated VSCode terminal.
+1. In the same directory as this readme file, run `mvn clean compile spring-boot:run`.
+1. Open your browser and navigate to `http://localhost:8080`.
+
+![Experience](./ReadmeFiles/app.png)
+
+## Explore the sample
+
+- Note the signed-in or signed-out status displayed at the center of the screen.
+- Click the context-sensitive button at the top right (it will read `Sign In` on first run)
+  - Alternatively, click the link to `token details`. Since this is a protected page that requires authentication, you'll be automatically redirected to the sign-in page.
+- Follow the instructions on the next page to sign in with an account in the Microsoft Entra tenant.
+- On the consent screen, note the scopes that are being requested.
+- Upon successful completion of the sign-in flow, you should be redirected to the home page (`sign in status`) or `token details` page, depending on which button triggered your sign-in flow.
+- Note the context-sensitive button now says `Sign out` and displays your username to its left.
+- If you are on the home page, you'll see an option to click **ID Token Details**: click it to see some of the ID token's decoded claims.
+- You can also use the button on the top right to sign out. The status page will reflect this.
+
+> :information_source: Did the sample not work for you as expected? Did you encounter issues trying this sample? Then please reach out to us using the [GitHub Issues](../../../../issues) page.
+
+## We'd love your feedback!
+
+Were we successful in addressing your learning objective? Consider taking a moment to [share your experience with us](https://forms.office.com/r/iTZtCTrZrH).
+
+## About the code
+
+This sample demonstrates how to use [Microsoft Entra ID Spring Boot Starter client library for Java](https://docs.microsoft.com/java/api/overview/azure/active-directory-spring-boot-starter-readme?view=azure-java-stable) to sign in users into your Microsoft Entra tenant. It also makes use of **Spring Oauth2 Client** and **Spring Web** boot starters. It uses claims from **ID Token** obtained from Microsoft Entra ID to display details of the signed-in user.
+
+### Project Initialization
+
+Create a new Java Maven project and copy the `pom.xml` file from this project, and the `src` folder of this repository.
+
+If you'd like to create a project like this from scratch, you may use [Spring Initializer](https://start.spring.io):
+
+- For **Packaging**, select `Jar`
+- For **Java** select version `17`
+- For **Dependencies**, add the following:
+  - Microsoft Entra ID
+  - Spring Oauth2 Client
+  - Spring Web
+- Be sure that it comes with Azure SDK version 3.3 or higher. If not, please consider replacing the pre-configured `pom.xml` with the `pom.xml` from this repository.
+
+### ID Token Claims
+
+To extract token details, make use of Spring Security's `AuthenticationPrincipal` and `OidcUser` object in a request mapping. See the [Sample Controller](./src/main/java/com/microsoft/azuresamples/msal4j/msidentityspringbootwebapp/SampleController.java) for an example of this app making use of ID Token claims.
+
+```java
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+//...
+@GetMapping(path = "/some_path")
+public String tokenDetails(@AuthenticationPrincipal OidcUser principal) {
+    Map<String, Object> claims = principal.getIdToken().getClaims();
+}
 ```
 
-The template uses Azure Spring Apps [Standard consumption and dedicated plan](https://learn.microsoft.com/azure/spring-apps/overview#standard-consumption-and-dedicated-plan) by default. If you want to switch to `Standard` plan, you can use the following command before running `azd up`.
+### Sign-in and sign-out links
 
-```bash
-azd env set PLAN standard
+To sign in, you must make a request to the Microsoft Entra ID sign-in endpoint that is automatically configured by **Microsoft Entra ID Spring Boot Starter client library for Java**.
+
+```html
+<a class="btn btn-success" href="/oauth2/authorization/azure">Sign In</a>
 ```
 
-If you have already provisioned the resources with the Standard consumption and dedicated plan and want to try the Standard plan, you need to run `azd down` first to delete the resources, and then run the above command and `azd up` again to provision and deploy.
+To sign out, you must make POST request to the **logout** endpoint.
 
-### Application Architecture
+```HTML
+<form action="#" th:action="@{/logout}" method="post">
+  <input class="btn btn-warning" type="submit" value="Sign Out" />
+</form>
+```
 
-This application utilizes the following Azure resources:
+### Authentication-dependent UI elements
 
-- [**Azure Spring Apps**](https://docs.microsoft.com/azure/spring-apps/) to host the application
-- [**Azure PostgreSQL - Flexible Server**](https://docs.microsoft.com/azure/postgresql/flexible-server/) for storage
+This app has some simple logic in the UI template pages for determining content to display based on whether the user is authenticated or not. For example, the following Spring Security Thymeleaf tags may be used:
 
-Here's a high level architecture diagram that illustrates these components. Notice that these are all contained within a single [resource group](https://docs.microsoft.com/azure/azure-resource-manager/management/manage-resource-groups-portal), that will be created for you when you create the resources.
+```html
+<div sec:authorize="isAuthenticated()">
+  this content only shows to authenticated users
+</div>
+<div sec:authorize="isAnonymous()">
+  this content only shows to not-authenticated users
+</div>
+```
 
-!["Application architecture diagram"](assets/resources.png)
+### Protecting routes with aadwebsecurityconfigureradapter
 
-> This template provisions resources to an Azure subscription that you will select upon provisioning them. Please refer to the [Pricing calculator for Microsoft Azure](https://azure.microsoft.com/pricing/calculator/) and, if needed, update the included Azure resource definitions found in `infra/main.bicep` to suit your needs.
+By default, this app protects the **ID Token Details** page so that only logged-in users can access it. This app uses configures these routes from the `app.protect.authenticated` property from the `application.yml` file. To configure your app's specific requirements, provide a self-defined configuration. For an example, see this app's [SecurityConfig](./src/main/java/com/microsoft/azuresamples/msal4j/msidentityspringbootwebapp/SecurityConfig.java) class.
 
-### Application Code
+```java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig  {
+    
+    @Value("${app.protect.authenticated}")
+    private String[] allowedOrigins;
+    
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // @formatter:off
+        http.apply(AadWebApplicationHttpSecurityConfigurer.aadWebApplication())
+        .and()
+        .authorizeHttpRequests()
+        .anyRequest().authenticated();
+        // @formatter:on
+        return http.build();
+    }    
+}
+```
 
-This template is structured to follow the [Azure Developer CLI](https://aka.ms/azure-dev/overview). You can learn more about `azd` architecture in [the official documentation](https://learn.microsoft.com/azure/developer/azure-developer-cli/make-azd-compatible?pivots=azd-create#understand-the-azd-architecture).
+## Deployment
 
-### Next Steps
+[Deploy to Azure App Service](../../4-Deployment/deploy-to-azure-app-service). Prepare your app for deployment to Azure App Service, configure authentication parameters and use various Azure services for managing your operations.
 
-At this point, you have a complete application deployed on Azure. But there is much more that the Azure Developer CLI can do. These next steps will introduce you to additional commands that will make creating applications on Azure much easier. Using the Azure Developer CLI, you can delete the resources easily.
+## More information
 
-- [`azd down`](https://learn.microsoft.com/azure/developer/azure-developer-cli/reference#azd-down) - to delete all the Azure resources created with this template
+- [Microsoft identity platform (Microsoft Entra ID for developers)](https://docs.microsoft.com/azure/active-directory/develop/)
+- [Overview of Microsoft Authentication Library (MSAL)](https://docs.microsoft.com/azure/active-directory/develop/msal-overview)
+- [Quickstart: Register an application with the Microsoft identity platform (Preview)](https://docs.microsoft.com/azure/active-directory/develop/quickstart-register-app)
+- [Quickstart: Configure a client application to access web APIs (Preview)](https://docs.microsoft.com/azure/active-directory/develop/quickstart-configure-app-access-web-apis)
+- [Understanding Microsoft Entra application consent experiences](https://docs.microsoft.com/azure/active-directory/develop/application-consent-experience)
+- [Understand user and admin consent](https://docs.microsoft.com/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant#understand-user-and-admin-consent)
+- [Application and service principal objects in Microsoft Entra ID](https://docs.microsoft.com/azure/active-directory/develop/app-objects-and-service-principals)
+- [National Clouds](https://docs.microsoft.com/azure/active-directory/develop/authentication-national-cloud#app-registration-endpoints)
+- [MSAL code samples](https://docs.microsoft.com/azure/active-directory/develop/sample-v2-code)
+- [Microsoft Entra ID Spring Boot Starter client library for Java](https://github.com/Azure/azure-sdk-for-java/tree/master/sdk/spring/azure-spring-boot-starter-active-directory)
+- [Microsoft Authentication Library for Java (MSAL4J)](https://github.com/AzureAD/microsoft-authentication-library-for-java)
+- [MSAL4J Wiki](https://github.com/AzureAD/microsoft-authentication-library-for-java/wiki)
+- [ID Tokens](https://docs.microsoft.com/azure/active-directory/develop/id-tokens)
+- [Access Tokens](https://docs.microsoft.com/azure/active-directory/develop/access-tokens)
 
+For more information about how OAuth 2.0 protocols work in this scenario and other scenarios, see [Authentication Scenarios for Microsoft Entra ID](https://docs.microsoft.com/azure/active-directory/develop/authentication-flows-app-scenarios).
 
-### Additional `azd` commands
+## Community Help and Support
 
-The Azure Developer CLI includes many other commands to help with your Azure development experience. You can view these commands at the terminal by running `azd help`. You can also view the full list of commands on our [Azure Developer CLI command](https://aka.ms/azure-dev/ref) page.
+Use [Stack Overflow](http://stackoverflow.com/questions/tagged/msal) to get support from the community.
+Ask your questions on Stack Overflow first and browse existing issues to see if someone has asked your question before.
+Make sure that your questions or comments are tagged with [`microsoft-entra-id` `azure-ad-b2c` `ms-identity` `adal` `msal`, `java`].
 
-## Reporting Issues and Feedback
+If you find a bug in the sample, raise the issue on [GitHub Issues](../../../../issues).
 
-If you have any feature requests, issues, or areas for improvement, please [file an issue](https://aka.ms/azure-dev/issues). To keep up-to-date, ask questions, or share suggestions, join our [GitHub Discussions](https://aka.ms/azure-dev/discussions). You may also contact us via AzDevTeam@microsoft.com.
+To provide feedback on or suggest features for Microsoft Entra ID, visit [User Voice page](https://feedback.azure.com/forums/169401-azure-active-directory).
+
+## Contributing
+
+If you'd like to contribute to this sample, see [CONTRIBUTING.MD](/CONTRIBUTING.md).
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information, see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
