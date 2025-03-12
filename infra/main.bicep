@@ -28,9 +28,8 @@ param psqlUserPassword string = 'SuperUserPassword1!'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
-var asaManagedEnvironmentName = '${abbrs.appContainerAppsManagedEnvironment}${resourceToken}'
-var asaInstanceName = '${abbrs.springApps}${resourceToken}'
-var appName = 'simple-todo-web'
+var containerAppEnvName = '${abbrs.appManagedEnvironments}${resourceToken}'
+var containerAppName = 'simple-todo-web'
 var psqlServerName = '${abbrs.postgresServer}${resourceToken}'
 var databaseName = 'Todo'
 var datasourceJdbcUrl= 'jdbc:postgresql://${psqlServerName}.postgres.database.azure.com:5432/${databaseName}'
@@ -64,35 +63,23 @@ module postgresql 'modules/postgresql/flexibleserver.bicep' = {
   }
 }
 
-module springAppsConsumption 'modules/springapps/springappsConsumption.bicep' = if (plan == 'consumption') {
-  name: '${deployment().name}--asaconsumption'
+module containerApp 'modules/containerapp/containerapp.bicep' = {
+  name: '${deployment().name}--containerapp'
   scope: resourceGroup(rg.name)
   params: {
     location: location
-	appName: appName
-	tags: tags
-	asaManagedEnvironmentName: asaManagedEnvironmentName
-	asaInstanceName: asaInstanceName
-	relativePath: relativePath
-	databaseUsername: psqlUserName
-	databasePassword: psqlUserPassword
-	datasourceUrl: datasourceJdbcUrl
-  }
-}
-
-module springAppsStandard 'modules/springapps/springappsStandard.bicep' = if (plan == 'standard') {
-  name: '${deployment().name}--asastandard'
-  scope: resourceGroup(rg.name)
-  params: {
-    location: location
-	appName: appName
-	tags: tags
-	asaInstanceName: asaInstanceName
-	relativePath: relativePath
-	databaseUsername: psqlUserName
-	databasePassword: psqlUserPassword
-	datasourceUrl: datasourceJdbcUrl
+    containerAppEnvName: containerAppEnvName
+    containerAppName: containerAppName
+    tags: tags
+    // Use Spring Boot compatible image from Microsoft Container Registry
+    imageName: 'mcr.microsoft.com/openjdk/jdk:17-distroless'
+    relativePath: relativePath  // Kept for compatibility
+    databaseUsername: psqlUserName
+    databasePassword: psqlUserPassword
+    datasourceUrl: datasourceJdbcUrl
+    port: 8080
   }
 }
 
 output AZURE_RESOURCE_GROUP string = rg.name
+output CONTAINER_APP_ENDPOINT string = containerApp.outputs.uri

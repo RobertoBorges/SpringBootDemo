@@ -1,0 +1,142 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerAppEnvName": {
+      "type": "string",
+      "defaultValue": "[format('cae-{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Specifies the name of the container app environment."
+      }
+    },
+    "containerAppName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    },
+    "databaseUsername": {
+      "type": "string"
+    },
+    "databasePassword": {
+      "type": "securestring"
+    },
+    "datasourceUrl": {
+      "type": "string"
+    },
+    "userAssignedManagedIdentityName": {
+      "type": "string"
+    },
+    "imageName": {
+      "type": "string",
+      "defaultValue": "mcr.microsoft.com/openjdk/jdk:17-distroless",
+      "metadata": {
+        "description": "The container image to deploy."
+      }
+    }
+  },
+  "variables": {
+    "appConfigEnvVars": {
+      "SPRING_DATASOURCE_URL": "[parameters('datasourceUrl')]",
+      "SPRING_DATASOURCE_USERNAME": "[parameters('databaseUsername')]",
+      "SPRING_DATASOURCE_PASSWORD": "[parameters('databasePassword')]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "name": "[parameters('userAssignedManagedIdentityName')]",
+      "apiVersion": "2023-01-31",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerAppEnvName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "workloadProfiles": [
+          {
+            "name": "Consumption",
+            "workloadProfileType": "Consumption"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerAppName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedManagedIdentityName'))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": true,
+            "targetPort": 8080,
+            "transport": "auto",
+            "allowInsecure": false
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "[parameters('imageName')]",
+              "name": "[parameters('containerAppName')]",
+              "env": [
+                {
+                  "name": "SPRING_DATASOURCE_URL",
+                  "value": "[parameters('datasourceUrl')]"
+                },
+                {
+                  "name": "SPRING_DATASOURCE_USERNAME",
+                  "value": "[parameters('databaseUsername')]"
+                },
+                {
+                  "name": "SPRING_DATASOURCE_PASSWORD",
+                  "value": "[parameters('databasePassword')]"
+                }
+              ],
+              "resources": {
+                "cpu": "0.5",
+                "memory": "1.0Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 3
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('userAssignedManagedIdentityName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "Name": {
+      "type": "string",
+      "value": "[parameters('containerAppName')]"
+    },
+    "URL": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName'))).configuration.ingress.fqdn)]"
+    }
+  }
+}

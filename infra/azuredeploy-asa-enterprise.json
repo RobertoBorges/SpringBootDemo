@@ -19,7 +19,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "[format('{0}--asa', deployment().name)]",
+      "name": "[format('{0}--aca', deployment().name)]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -49,11 +49,11 @@
   "outputs": {
     "Name": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}--asa', deployment().name)), '2022-09-01').outputs.Name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}--aca', deployment().name)), '2022-09-01').outputs.Name.value]"
     },
     "URL": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}--asa', deployment().name)), '2022-09-01').outputs.URL.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}--aca', deployment().name)), '2022-09-01').outputs.URL.value]"
     }
   }
 }

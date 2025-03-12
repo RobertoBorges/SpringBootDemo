@@ -174,8 +174,8 @@
     },
     "abbrs": "[variables('$fxv#0')]",
     "resourceToken": "[toLower(uniqueString(subscription().id, resourceGroup().name, parameters('location')))]",
-    "asaInstanceName": "[format('{0}{1}', variables('abbrs').springApps, variables('resourceToken'))]",
-    "appName": "simple-todo-web",
+    "containerAppEnvName": "[format('{0}{1}', variables('abbrs').appManagedEnvironments, variables('resourceToken'))]",
+    "containerAppName": "simple-todo-web",
     "psqlServerName": "[format('{0}{1}', variables('abbrs').postgresServer, variables('resourceToken'))]",
     "databaseName": "Todo",
     "datasourceJdbcUrl": "[concat('jdbc:postgresql://', variables('psqlServerName'), '.postgres.database.azure.com:5432/', variables('databaseName'))]",
@@ -386,14 +386,14 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "appName": {
-            "value": "[variables('appName')]"
+          "containerAppName": {
+            "value": "[variables('containerAppName')]"
+          },
+          "containerAppEnvName": {
+            "value": "[concat(variables('containerAppEnvName'), '-', parameters('plan'))]"
           },
           "tags": {
-            "value": "[union(variables('tags'), createObject('asa-service-name', variables('appName')))]"
-          },
-          "asaInstanceName": {
-            "value": "[concat(variables('asaInstanceName'), '-', parameters('plan'))]"
+            "value": "[union(variables('tags'), createObject('container-app-name', variables('containerAppName')))]"
           },
           "databaseUsername": {
             "value": "[variables('psqlUserName')]"
@@ -409,13 +409,13 @@
           }
         },
         "templateLink": {
-          "relativePath": "azuredeploy/consumption.json",
+          "relativePath": "azuredeploy/containerapp.json",
           "contentVersion":"1.0.0.0"
         }
       }
     },
     {
-      "condition": "[equals(parameters('plan'), 'standard')]",
+      "condition": "[or(equals(parameters('plan'), 'standard'), equals(parameters('plan'), 'enterprise'))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('{0}--{1}', deployment().name, parameters('plan'))]",
@@ -428,14 +428,14 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "appName": {
-            "value": "[variables('appName')]"
+          "containerAppName": {
+            "value": "[variables('containerAppName')]"
+          },
+          "containerAppEnvName": {
+            "value": "[concat(variables('containerAppEnvName'), '-', parameters('plan'))]"
           },
           "tags": {
-            "value": "[union(variables('tags'), createObject('asa-service-name', variables('appName')))]"
-          },
-          "asaInstanceName": {
-            "value": "[concat(variables('asaInstanceName'), '-', parameters('plan'))]"
+            "value": "[union(variables('tags'), createObject('container-app-name', variables('containerAppName')))]"
           },
           "databaseUsername": {
             "value": "[variables('psqlUserName')]"
@@ -451,49 +451,7 @@
           }
         },
         "templateLink": {
-          "relativePath": "azuredeploy/standard.json",
-          "contentVersion":"1.0.0.0"
-        }
-      }
-    },
-    {
-      "condition": "[equals(parameters('plan'), 'enterprise')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "[format('{0}--{1}', deployment().name, parameters('plan'))]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "appName": {
-            "value": "[variables('appName')]"
-          },
-          "tags": {
-            "value": "[union(variables('tags'), createObject('asa-service-name', variables('appName')))]"
-          },
-          "asaInstanceName": {
-            "value": "[concat(variables('asaInstanceName'), '-', parameters('plan'))]"
-          },
-          "databaseUsername": {
-            "value": "[variables('psqlUserName')]"
-          },
-          "databasePassword": {
-            "value": "[parameters('postgreSQLUserPassword')]"
-          },
-          "datasourceUrl": {
-            "value": "[variables('datasourceJdbcUrl')]"
-          },
-          "userAssignedManagedIdentityName": {
-            "value": "[concat(variables('userAssignedManagedIdentityName'), '-', parameters('plan'))]"
-          }
-        },
-        "templateLink": {
-          "relativePath": "azuredeploy/enterprise.json",
+          "relativePath": "azuredeploy/containerapp.json",
           "contentVersion":"1.0.0.0"
         }
       }
